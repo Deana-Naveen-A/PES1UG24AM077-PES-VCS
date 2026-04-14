@@ -5,6 +5,7 @@ test_tree
 
 # Object files
 *.o
+*.obsidian
 
 # PES repository (created during testing)
 .pes/
@@ -15,3 +16,5 @@ test_tree
 *~
 .vscode/
 .idea/
+
+

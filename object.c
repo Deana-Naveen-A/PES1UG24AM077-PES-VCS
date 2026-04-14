@@ -77,6 +77,18 @@ int object_exists(const ObjectID *id) {
 //   7. rename() the temp file to the final path (atomic on POSIX)
 //   8. Open and fsync() the shard directory to persist the rename
 //   9. Store the computed hash in *id_out
+
+// HINTS - Useful syscalls and functions for this phase:
+//   - sprintf / snprintf : formatting the header string
+//   - compute_hash       : hashing the combined header + data
+//   - object_exists      : checking for deduplication
+//   - mkdir              : creating the shard directory (use mode 0755)
+//   - open, write, close : creating and writing to the temp file
+//                          (Use O_CREAT | O_WRONLY | O_TRUNC, mode 0644)
+//   - fsync              : flushing the file descriptor to disk
+//   - rename             : atomically moving the temp file to the final path
+//
+
 //
 // Returns 0 on success, -1 on error.
 int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out) {
@@ -95,6 +107,17 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
 //      and compare to the expected hash (from *id). Return -1 if mismatch.
 //   5. Set *type_out to the parsed ObjectType
 //   6. Allocate a buffer, copy the data portion (after the \0), set *data_out and *len_out
+//
+// HINTS - Useful syscalls and functions for this phase:
+//   - object_path        : getting the target file path
+//   - fopen, fread, fseek: reading the file into memory
+//   - memchr             : safely finding the '\0' separating header and data
+//   - strncmp            : parsing the type string ("blob", "tree", "commit")
+//   - compute_hash       : re-hashing the read data for integrity verification
+//   - memcmp             : comparing the computed hash against the requested hash
+//   - malloc, memcpy     : allocating and returning the extracted data
+//
+// The caller is responsible for calling free(*data_out).
 //
 // The caller is responsible for calling free(*data_out).
 // Returns 0 on success, -1 on error (file not found, corrupt, etc.).

@@ -46,21 +46,21 @@ If unset, it defaults to `"PES User <pes@localhost>"`.
 
 ### File Inventory
 
-| File             | Role                                  | Your Task                                   |
-| ---------------- | ------------------------------------- | ------------------------------------------- |
-| `pes.h`          | Core data structures and constants    | Do not modify                               |
-| `object.c`       | Content-addressable object store      | Implement `object_write`, `object_read`     |
-| `tree.h`         | Tree object interface                 | Do not modify                               |
-| `tree.c`         | Tree serialization and construction   | Implement `tree_parse`, `tree_serialize`, `tree_from_index` |
-| `index.h`        | Staging area interface                | Do not modify                               |
-| `index.c`        | Staging area (text-based index file)  | Implement `index_load`, `index_save`, `index_add`, `index_status` |
-| `commit.h`       | Commit object interface               | Do not modify                               |
-| `commit.c`       | Commit creation and history           | Implement `head_read`, `head_update`, `commit_create` |
-| `pes.c`          | CLI entry point and command dispatch  | Implement `cmd_commit`                      |
-| `test_objects.c`  | Phase 1 test program                  | Do not modify                               |
-| `test_tree.c`     | Phase 2 test program                  | Do not modify                               |
-| `test_sequence.sh`| End-to-end integration test           | Do not modify                               |
-| `Makefile`        | Build system                          | Do not modify                               |
+| File               | Role                                 | Your Task                                          |
+| ------------------ | ------------------------------------ | -------------------------------------------------- |
+| `pes.h`            | Core data structures and constants   | Do not modify                                      |
+| `object.c`         | Content-addressable object store     | Implement `object_write`, `object_read`            |
+| `tree.h`           | Tree object interface                | Do not modify                                      |
+| `tree.c`           | Tree serialization and construction  | Implement `tree_from_index`                        |
+| `index.h`          | Staging area interface               | Do not modify                                      |
+| `index.c`          | Staging area (text-based index file) | Implement `index_load`, `index_save`, `index_add`, |
+| `commit.h`         | Commit object interface              | Do not modify                                      |
+| `commit.c`         | Commit creation and history          | Implement `commit_create`                          |
+| `pes.c`            | CLI entry point and command dispatch | Do not modify                                      |
+| `test_objects.c`   | Phase 1 test program                 | Do not modify                                      |
+| `test_tree.c`      | Phase 2 test program                 | Do not modify                                      |
+| `test_sequence.sh` | End-to-end integration test          | Do not modify                                      |
+| `Makefile`         | Build system                         | Do not modify                                      |
 
 ---
 

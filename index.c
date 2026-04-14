@@ -10,11 +10,10 @@
 //
 // This is intentionally a simple text format. No magic numbers, no
 // binary parsing. The focus is on the staging area CONCEPT (tracking
-// what will go into the next commit) and ATOMIC WRITES (temp+rename),
-// not on binary format gymnastics.
+// what will go into the next commit) and ATOMIC WRITES (temp+rename).
 //
-// PROVIDED functions: index_find, index_remove
-// TODO functions:     index_load, index_save, index_add, index_status
+// PROVIDED functions: index_find, index_remove, index_status
+// TODO functions:     index_load, index_save, index_add
 
 #include "index.h"
 #include <stdio.h>
@@ -53,107 +52,124 @@ int index_remove(Index *index, const char *path) {
     return -1;
 }
 
+// Print the status of the working directory.
+//
+// Identifies files that are staged, unstaged (modified/deleted in working dir),
+// and untracked (present in working dir but not in index).
+// Returns 0.
+int index_status(const Index *index) {
+    printf("Staged changes:\n");
+    int staged_count = 0;
+    // Note: A true Git implementation deeply diffs against the HEAD tree here. 
+    // For this lab, displaying indexed files represents the staging intent.
+    for (int i = 0; i < index->count; i++) {
+        printf("  staged:     %s\n", index->entries[i].path);
+        staged_count++;
+    }
+    if (staged_count == 0) printf("  (nothing to show)\n");
+    printf("\n");
+
+    printf("Unstaged changes:\n");
+    int unstaged_count = 0;
+    for (int i = 0; i < index->count; i++) {
+        struct stat st;
+        if (stat(index->entries[i].path, &st) != 0) {
+            printf("  deleted:    %s\n", index->entries[i].path);
+            unstaged_count++;
+        } else {
+            // Fast diff: check metadata instead of re-hashing file content
+            if (st.st_mtime != (time_t)index->entries[i].mtime_sec || st.st_size != (off_t)index->entries[i].size) {
+                printf("  modified:   %s\n", index->entries[i].path);
+                unstaged_count++;
+            }
+        }
+    }
+    if (unstaged_count == 0) printf("  (nothing to show)\n");
+    printf("\n");
+
+    printf("Untracked files:\n");
+    int untracked_count = 0;
+    DIR *dir = opendir(".");
+    if (dir) {
+        struct dirent *ent;
+        while ((ent = readdir(dir)) != NULL) {
+            // Skip hidden directories, parent directories, and build artifacts
+            if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) continue;
+            if (strcmp(ent->d_name, ".pes") == 0) continue;
+            if (strcmp(ent->d_name, "pes") == 0) continue; // compiled executable
+            if (strstr(ent->d_name, ".o") != NULL) continue; // object files
+
+            // Check if file is tracked in the index
+            int is_tracked = 0;
+            for (int i = 0; i < index->count; i++) {
+                if (strcmp(index->entries[i].path, ent->d_name) == 0) {
+                    is_tracked = 1; 
+                    break;
+                }
+            }
+            
+            if (!is_tracked) {
+                struct stat st;
+                stat(ent->d_name, &st);
+                if (S_ISREG(st.st_mode)) { // Only list regular files for simplicity
+                    printf("  untracked:  %s\n", ent->d_name);
+                    untracked_count++;
+                }
+            }
+        }
+        closedir(dir);
+    }
+    if (untracked_count == 0) printf("  (nothing to show)\n");
+    printf("\n");
+
+    return 0;
+}
+
 // ─── TODO: Implement these ───────────────────────────────────────────────────
 
 // Load the index from .pes/index.
 //
-// Steps:
-//   1. If .pes/index does not exist, set index->count = 0 and return 0
-//   2. Open the file for reading (fopen with "r")
-//   3. For each line, parse the fields:
-//      - Use fscanf or sscanf to read: mode, hex-hash, mtime, size, path
-//      - Convert the 64-char hex hash to an ObjectID using hex_to_hash()
-//   4. Populate index->entries and index->count
+// HINTS - Useful functions:
+//   - fopen (with "r"), fscanf, fclose : reading the text file line by line
+//   - hex_to_hash                      : converting the parsed string to ObjectID
 //
 // Returns 0 on success, -1 on error.
 int index_load(Index *index) {
-    // TODO: Implement
+    // TODO: Implement index loading
+    // (See Lab Appendix for logical steps)
     (void)index;
     return -1;
 }
 
 // Save the index to .pes/index atomically.
 //
-// Steps:
-//   1. Sort entries by path (use qsort with strcmp on the path field)
-//   2. Open a temporary file for writing (.pes/index.tmp)
-//   3. For each entry, write one line:
-//      "<mode> <64-char-hex-hash> <mtime_sec> <size> <path>\n"
-//      - Convert ObjectID to hex using hash_to_hex()
-//   4. fflush() and fsync() the temp file to ensure data reaches disk
-//   5. fclose() the temp file
-//   6. rename(".pes/index.tmp", ".pes/index") — atomic replacement
-//
-// The rename() call is the key filesystem concept here: it is atomic
-// on POSIX systems, meaning the index file is never in a half-written
-// state even if the system crashes.
+// HINTS - Useful functions and syscalls:
+//   - qsort                            : sorting the entries array by path
+//   - fopen (with "w"), fprintf        : writing to the temporary file
+//   - hash_to_hex                      : converting ObjectID for text output
+//   - fflush, fileno, fsync, fclose    : flushing userspace buffers and syncing to disk
+//   - rename                           : atomically moving the temp file over the old index
 //
 // Returns 0 on success, -1 on error.
 int index_save(const Index *index) {
-    // TODO: Implement
+    // TODO: Implement atomic index saving
+    // (See Lab Appendix for logical steps)
     (void)index;
     return -1;
 }
 
 // Stage a file for the next commit.
 //
-// Steps:
-//   1. Open and read the file at `path`
-//   2. Write the file contents as a blob: object_write(OBJ_BLOB, ...)
-//   3. Stat the file to get mode, mtime, and size
-//      - Use stat() or lstat()
-//      - mtime_sec = st.st_mtime
-//      - size = st.st_size
-//      - mode: use 0100755 if executable (st_mode & S_IXUSR), else 0100644
-//   4. Search the index for an existing entry with this path (index_find)
-//      - If found: update its hash, mode, mtime, and size
-//      - If not found: append a new entry (check count < MAX_INDEX_ENTRIES)
-//   5. Save the index to disk (index_save)
+// HINTS - Useful functions and syscalls:
+//   - fopen, fread, fclose             : reading the target file's contents
+//   - object_write                     : saving the contents as OBJ_BLOB
+//   - stat / lstat                     : getting file metadata (size, mtime, mode)
+//   - index_find                       : checking if the file is already staged
 //
-// Returns 0 on success, -1 on error (file not found, etc.).
+// Returns 0 on success, -1 on error.
 int index_add(Index *index, const char *path) {
-    // TODO: Implement
+    // TODO: Implement file staging
+    // (See Lab Appendix for logical steps)
     (void)index; (void)path;
-    return -1;
-}
-
-// Print the status of the working directory.
-//
-// This involves THREE comparisons:
-//
-// 1. Index vs HEAD (staged changes):
-//    - Load the HEAD commit's tree (if any commits exist)
-//    - For each index entry, check if it exists in HEAD's tree with the same hash
-//    - New in index but not in HEAD:       "new file:   <path>"
-//    - In both but different hash:          "modified:   <path>"
-//
-// 2. Working directory vs index (unstaged changes):
-//    - For each index entry, check the working directory file
-//    - If file is missing:                  "deleted:    <path>"
-//    - If file's mtime or size changed, recompute its hash:
-//      - If hash differs from index:        "modified:   <path>"
-//    - (If mtime+size unchanged, skip — assume file is unmodified)
-//
-// 3. Untracked files:
-//    - Scan the working directory (skip .pes/)
-//    - Any file not in the index:           "<path>"
-//
-// Expected output:
-//   Staged changes:
-//       new file:   hello.txt
-//
-//   Unstaged changes:
-//       modified:   README.md
-//
-//   Untracked files:
-//       notes.txt
-//
-// If a section has no entries, print the header followed by
-//   (nothing to show)
-//
-// Returns 0.
-int index_status(const Index *index) {
-    // TODO: Implement
-    (void)index;
     return -1;
 }

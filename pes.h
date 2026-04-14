@@ -6,6 +6,7 @@
 #ifndef PES_H
 #define PES_H
 
+#include <stdio.h>
 #include <stdint.h>
 #include <stddef.h>
 #include <stdlib.h>
