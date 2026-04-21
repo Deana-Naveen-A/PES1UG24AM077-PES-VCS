@@ -98,7 +98,7 @@ int index_status(const Index *index) {
     return 0;
 }
 
-// ─── IMPLEMENTED ─────────────────────────────────────────────────────────────
+
 
 static int compare_entries(const void *a, const void *b) {
     return strcmp(((const IndexEntry *)a)->path, ((const IndexEntry *)b)->path);
@@ -108,7 +108,7 @@ int index_load(Index *index) {
     index->count = 0;
 
     FILE *f = fopen(INDEX_FILE, "r");
-    if (!f) return 0; // No index yet — that's fine, start empty
+    if (!f) return 0; 
 
     char hex[HASH_HEX_SIZE + 1];
     char path[512];
@@ -136,11 +136,11 @@ int index_load(Index *index) {
 }
 
 int index_save(const Index *index) {
-    // Sort entries by path before saving
+
     Index sorted = *index;
     qsort(sorted.entries, sorted.count, sizeof(IndexEntry), compare_entries);
 
-    // Write to temp file first
+ 
     char tmp_path[] = ".pes/index.tmp.XXXXXX";
     int fd = mkstemp(tmp_path);
     if (fd < 0) return -1;
@@ -163,13 +163,13 @@ int index_save(const Index *index) {
     fsync(fileno(f));
     fclose(f);
 
-    // Atomically replace old index
+    
     if (rename(tmp_path, INDEX_FILE) < 0) return -1;
     return 0;
 }
 
 int index_add(Index *index, const char *path) {
-    // Read file contents
+
     FILE *f = fopen(path, "rb");
     if (!f) {
         fprintf(stderr, "error: cannot open '%s'\n", path);
@@ -185,7 +185,6 @@ int index_add(Index *index, const char *path) {
     fread(contents, 1, file_size, f);
     fclose(f);
 
-    // Write blob to object store
     ObjectID blob_id;
     if (object_write(OBJ_BLOB, contents, file_size, &blob_id) < 0) {
         free(contents);
@@ -193,11 +192,10 @@ int index_add(Index *index, const char *path) {
     }
     free(contents);
 
-    // Get file metadata
+
     struct stat st;
     if (lstat(path, &st) < 0) return -1;
 
-    // Update or add index entry
     IndexEntry *existing = index_find(index, path);
     if (!existing) {
         if (index->count >= MAX_INDEX_ENTRIES) return -1;
